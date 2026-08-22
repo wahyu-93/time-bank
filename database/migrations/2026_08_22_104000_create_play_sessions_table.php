@@ -13,6 +13,18 @@ return new class extends Migration
     {
         Schema::create('play_sessions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('child_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('privilege_request_id')->constrained()->cascadeOnDelete();
+            $table->timestamp('started_at')->nullable();
+            $table->timestamp('ended_at')->nullable();
+            $table->unsignedInteger('planned_minutes');
+            $table->unsignedInteger('actual_minutes')->nullable();
+            $table->enum('status', [
+                'pending',
+                'active',
+                'completed',
+                'cancelled',
+            ])->default('pending');
             $table->timestamps();
         });
     }

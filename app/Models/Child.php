@@ -70,4 +70,9 @@ class Child extends Model
     {
         return $this->hasMany(PrivilegeRequest::class);
     }
+
+    public function playSessions(): HasMany
+    {
+        return $this->hasMany(PlaySession::class);
+    }
 }

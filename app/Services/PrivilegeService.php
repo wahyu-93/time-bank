@@ -11,10 +11,8 @@ use RuntimeException;
 
 class PrivilegeService
 {
-    public function request(
-        Child $child,
-        Privilege $privilege
-    ): PrivilegeRequest {
+    public function request(Child $child, Privilege $privilege): PrivilegeRequest 
+    {
         $childPrivilege = $child->privileges()
             ->whereKey($privilege->id)
             ->wherePivot('is_active', true)
@@ -45,10 +43,8 @@ class PrivilegeService
         ]);
     }
 
-    public function approve(
-        PrivilegeRequest $request,
-        User $parent
-    ): PrivilegeRequest {
+    public function approve(PrivilegeRequest $request, User $parent): PrivilegeRequest 
+    {
         return DB::transaction(function () use ($request, $parent) {
             if ($request->status !== 'pending') {
                 throw new RuntimeException(
@@ -76,15 +72,18 @@ class PrivilegeService
                 'reviewed_at' => now(),
             ]);
 
+            $request->child->playSessions()->create([
+                'privilege_request_id' => $request->id,
+                'planned_minutes' => $request->cost_minutes,
+                'status' => 'pending',
+            ]);
+
             return $request->fresh();
         });
     }
 
-    public function reject(
-        PrivilegeRequest $request,
-        User $parent,
-        ?string $note = null
-    ): PrivilegeRequest {
+    public function reject(PrivilegeRequest $request, User $parent, ?string $note = null): PrivilegeRequest 
+    {
         if ($request->status !== 'pending') {
             throw new RuntimeException(
                 'This request has already been processed.'
