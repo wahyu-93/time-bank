@@ -16,13 +16,21 @@ Route::get('/user', function (Request $request) {
 
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::middleware(['auth:sanctum', 'family.child'])->group(function () {
-    Route::get('/children/{child}/dashboard', [ChildDashboardController::class, 'show',]);
-});
+// Route::middleware(['auth:sanctum', 'family.child'])->group(function () {
+//     Route::get('/children/{child}/dashboard', [ChildDashboardController::class, 'show',]);
+// });
+
+Route::get('/children/{child}/dashboard', [ChildDashboardController::class, 'show',]);
 
 Route::post('/rfid/identify', [RfidController::class, 'identify',]);
 
 Route::post('/children/{child}/activities/{activity}/claim', [ActivityClaimController::class, 'store']);
+
+Route::get('/children/{child}/play-session', [PlaySessionController::class,'current']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/activity-claims/pending', [ActivityClaimController::class, 'pending']);
+});
 
 Route::middleware(['auth:sanctum', 'family.claim'])->group(function () {
     Route::post('/activity-claims/{claim}/approve', [ActivityApprovalController::class, 'approve']);
@@ -35,8 +43,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/play-sessions/{session}/finish', [PlaySessionController::class, 'finish']);
 });
 
+Route::post('/children/{child}/privileges/{privilege}/request', [PrivilegeRequestController::class, 'store']);
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/children/{child}/privileges/{privilege}/request', [PrivilegeRequestController::class, 'store']);
+    Route::get('/privilege-requests/pending', [PrivilegeRequestController::class, 'pending']);
     Route::post('/privilege-requests/{privilegeRequest}/approve', [PrivilegeRequestController::class, 'approve'])->middleware('family.privilege');
     Route::post('/privilege-requests/{privilegeRequest}/reject', [PrivilegeRequestController::class, 'reject'])->middleware('family.privilege');
 });

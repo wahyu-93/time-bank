@@ -17,6 +17,13 @@ class ChildDashboardController extends Controller
 
         $balance = $timeBank->balance($child);
 
+        $privilegeRequests = $child->privilegeRequests()
+            ->whereDate('created_at', today())
+            ->latest('id')
+            ->get()
+            ->groupBy('privilege_id')
+            ->map(fn ($requests) => $requests->first());
+
         return response()->json([
             'data' => [
                 'child' => [
@@ -69,18 +76,18 @@ class ChildDashboardController extends Controller
                         ];
                     }),
 
-                'privileges' => $child->privileges
-                    ->where('is_active', true)
-                    ->values()
-                    ->map(fn ($privilege) => [
+                'privileges' => $child->privileges->map(function ($privilege) use ($privilegeRequests) {
+                    $request = $privilegeRequests->get($privilege->id);
+
+                    return [
                         'id' => $privilege->id,
                         'name' => $privilege->name,
                         'description' => $privilege->description,
                         'icon' => $privilege->icon,
-                        'cost_minutes' =>
-                            $privilege->pivot->custom_cost_minutes
-                            ?? $privilege->cost_minutes,
-                    ]),
+                        'cost_minutes' => $privilege->cost_minutes,
+                        'status' => $request?->status ?? 'available',
+                    ];
+                }),
             ],
         ]);
     }

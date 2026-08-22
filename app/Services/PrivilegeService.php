@@ -8,36 +8,41 @@ use App\Models\PrivilegeRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
+use App\Services\TimeBankService;
 
 class PrivilegeService
 {
-    public function request(Child $child, Privilege $privilege): PrivilegeRequest 
+    public function __construct(private TimeBankService $timeBank) 
     {
-        $childPrivilege = $child->privileges()
-            ->whereKey($privilege->id)
-            ->wherePivot('is_active', true)
-            ->first();
+        //
+    }
 
-        if (!$childPrivilege) {
-            throw new RuntimeException(
-                'This privilege is not available for this child.'
-            );
+    public function request(Child $child, Privilege $privilege): PrivilegeRequest
+    {
+        $balance = $this->timeBank->balance($child);
+
+        if ($privilege->cost_minutes > $balance) {
+            throw new RuntimeException('Saldo waktu tidak cukup.');
         }
 
-        $cost = $childPrivilege->pivot->custom_cost_minutes
-            ?? $privilege->cost_minutes;
+        $existing = $child->privilegeRequests()
+            ->where('privilege_id', $privilege->id)
+            ->whereDate('created_at', today())
+            ->whereIn('status', ['pending', 'approved'])
+            ->latest('id')
+            ->first();
 
-        $balance = app(TimeBankService::class)->balance($child);
-
-        if ($balance < $cost) {
+        if ($existing) {
             throw new RuntimeException(
-                "Insufficient time balance. Current balance: {$balance} minutes."
+                $existing->status === 'pending'
+                    ? 'Permintaan ini masih menunggu persetujuan orang tua.'
+                    : 'Privilege ini sudah disetujui hari ini.'
             );
         }
 
         return $child->privilegeRequests()->create([
             'privilege_id' => $privilege->id,
-            'cost_minutes' => $cost,
+            'cost_minutes' => $privilege->cost_minutes,
             'status' => 'pending',
             'requested_at' => now(),
         ]);

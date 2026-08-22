@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Privilege;
 use App\Models\PrivilegeRequest;
 use App\Models\Child;
+use App\Models\PlaySession;
 use App\Services\PrivilegeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,13 @@ class PrivilegeRequestController extends Controller
                     'play_session_id' => $result->playSession?->id,
                 ],
             ]);
+
+            PlaySession::create([
+                'child_id' => $request->child_id,
+                'privilege_request_id' => $request->id,
+                'duration_minutes' => $request->cost_minutes,
+                'status' => 'pending',
+            ]);
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -67,5 +75,28 @@ class PrivilegeRequestController extends Controller
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    public function pending(Request $request): JsonResponse
+    {
+        $familyIds = $request->user()->families()->pluck('families.id');
+
+        $requests = PrivilegeRequest::with(['child', 'privilege'])
+            ->where('status', 'pending')
+            ->whereHas('child', fn ($q) => $q->whereIn('family_id', $familyIds))
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'data' => $requests->map(fn ($item) => [
+                'id' => $item->id,
+                'child_id' => $item->child_id,
+                'child_name' => $item->child->name,
+                'privilege_id' => $item->privilege_id,
+                'privilege_name' => $item->privilege->name,
+                'cost_minutes' => $item->cost_minutes,
+                'requested_at' => $item->requested_at,
+            ]),
+        ]);
     }
 }

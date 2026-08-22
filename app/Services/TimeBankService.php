@@ -16,14 +16,8 @@ class TimeBankService
         return (int) $child->timeTransactions()->sum('amount');
     }
 
-    public function add(
-        Child $child,
-        int $minutes,
-        string $type,
-        string $description,
-        ?User $user = null,
-        ?Model $source = null,
-    ): TimeTransaction {
+    public function add(Child $child, int $minutes, string $type, string $description, ?User $user = null, ?Model $source = null): TimeTransaction 
+    {
         if ($minutes <= 0) {
             throw new RuntimeException('Amount must be greater than zero.');
         }
@@ -38,14 +32,8 @@ class TimeBankService
         );
     }
 
-    public function subtract(
-        Child $child,
-        int $minutes,
-        string $type,
-        string $description,
-        ?User $user = null,
-        ?Model $source = null,
-    ): TimeTransaction {
+    public function subtract(Child $child, int $minutes, string $type, string $description, ?User $user = null, ?Model $source = null): TimeTransaction
+    {
         if ($minutes <= 0) {
             throw new RuntimeException('Amount must be greater than zero.');
         }
@@ -70,14 +58,8 @@ class TimeBankService
         );
     }
 
-    private function transaction(
-        Child $child,
-        int $amount,
-        string $type,
-        string $description,
-        ?User $user,
-        ?Model $source,
-    ): TimeTransaction {
+    private function transaction(Child $child, int $amount, string $type, string $description, ?User $user, ?Model $source): TimeTransaction 
+    {
         return DB::transaction(function () use (
             $child,
             $amount,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Child;
 use App\Models\PlaySession;
 use App\Services\PlaySessionService;
 use Illuminate\Http\JsonResponse;
@@ -69,6 +70,18 @@ class PlaySessionController extends Controller
                 'started_at' => $session->started_at,
                 'ended_at' => $session->ended_at,
             ],
+        ]);
+    }
+
+    public function current(Child $child): JsonResponse
+    {
+        $session = $child->playSessions()
+            ->whereIn('status', ['pending', 'running'])
+            ->latest()
+            ->first();
+
+        return response()->json([
+            'data' => $session,
         ]);
     }
 }
