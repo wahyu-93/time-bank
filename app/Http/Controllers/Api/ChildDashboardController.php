@@ -1,0 +1,82 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Child;
+use App\Services\ActivityStatusService;
+use App\Services\TimeBankService;
+use Illuminate\Http\JsonResponse;
+
+class ChildDashboardController extends Controller
+{
+    public function show(Child $child, TimeBankService $timeBank, ActivityStatusService $activityStatus): JsonResponse 
+    {
+        $child->load(['activities','privileges',]);
+
+        $balance = $timeBank->balance($child);
+
+        return response()->json([
+            'data' => [
+                'child' => [
+                    'id' => $child->id,
+                    'name' => $child->name,
+                    'age' => $child->birth_date?->age,
+                    'avatar' => $child->avatar,
+                ],
+
+                'time_bank' => [
+                    'balance_minutes' => max($balance, 0),
+                    'debt_minutes' => max(-$balance, 0),
+                ],
+
+                'screen_time' => [
+                    'used_minutes' => 0,
+                    'daily_limit_minutes' => $child->daily_limit_minutes,
+                ],
+
+                'activities' => $child->activities
+                    ->where('is_active', true)
+                    ->values()
+                    ->map(function ($activity) use (
+                        $child,
+                        $activityStatus
+                    ) {
+                        return [
+                            'id' => $activity->id,
+                            'name' => $activity->name,
+                            'description' => $activity->description,
+                            'icon' => $activity->icon,
+                            'type' => $activity->type,
+
+                            'reward_minutes' =>
+                                $activity->pivot->custom_reward_minutes
+                                ?? $activity->reward_minutes,
+
+                            'penalty_minutes' =>
+                                $activity->pivot->custom_penalty_minutes
+                                ?? $activity->penalty_minutes,
+
+                            'status' => $activityStatus->status(
+                                $child,
+                                $activity
+                            ),
+                        ];
+                    }),
+
+                'privileges' => $child->privileges
+                    ->where('is_active', true)
+                    ->values()
+                    ->map(fn ($privilege) => [
+                        'id' => $privilege->id,
+                        'name' => $privilege->name,
+                        'description' => $privilege->description,
+                        'icon' => $privilege->icon,
+                        'cost_minutes' =>
+                            $privilege->pivot->custom_cost_minutes
+                            ?? $privilege->cost_minutes,
+                    ]),
+            ],
+        ]);
+    }
+}
