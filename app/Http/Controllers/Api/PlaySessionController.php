@@ -48,4 +48,27 @@ class PlaySessionController extends Controller
             ], 422);
         }
     }
+
+    public function show(PlaySession $session): JsonResponse
+    {
+        $remainingSeconds = 0;
+
+        if ($session->status === 'pending') {
+            $remainingSeconds = $session->planned_minutes * 60;
+        } elseif ($session->status === 'active') {
+            $elapsed = $session->started_at->diffInSeconds(now());
+            $remainingSeconds = max(0, ($session->planned_minutes * 60) - $elapsed);
+        }
+
+        return response()->json([
+            'data' => [
+                'id' => $session->id,
+                'status' => $session->status,
+                'planned_minutes' => $session->planned_minutes,
+                'remaining_seconds' => $remainingSeconds,
+                'started_at' => $session->started_at,
+                'ended_at' => $session->ended_at,
+            ],
+        ]);
+    }
 }

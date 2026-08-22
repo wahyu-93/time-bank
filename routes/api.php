@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ActivityClaimController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChildDashboardController;
 use App\Http\Controllers\Api\PlaySessionController;
+use App\Http\Controllers\Api\PrivilegeRequestController;
 use App\Http\Controllers\Api\RfidController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -29,8 +30,15 @@ Route::middleware(['auth:sanctum', 'family.claim'])->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/play-sessions/{session}', [PlaySessionController::class, 'show']);
     Route::post('/play-sessions/{session}/start', [PlaySessionController::class, 'start']);
     Route::post('/play-sessions/{session}/finish', [PlaySessionController::class, 'finish']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/children/{child}/privileges/{privilege}/request', [PrivilegeRequestController::class, 'store']);
+    Route::post('/privilege-requests/{privilegeRequest}/approve', [PrivilegeRequestController::class, 'approve'])->middleware('family.privilege');
+    Route::post('/privilege-requests/{privilegeRequest}/reject', [PrivilegeRequestController::class, 'reject'])->middleware('family.privilege');
 });
 
 Route::middleware('auth:sanctum')->group(function () {

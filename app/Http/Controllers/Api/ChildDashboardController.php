@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Models\Child;
+use App\Http\Controllers\Controller;
 use App\Services\ActivityStatusService;
+use App\Services\PlaySessionService;
 use App\Services\TimeBankService;
 use Illuminate\Http\JsonResponse;
 
 class ChildDashboardController extends Controller
 {
-    public function show(Child $child, TimeBankService $timeBank, ActivityStatusService $activityStatus): JsonResponse 
+    public function show(Child $child, TimeBankService $timeBank, ActivityStatusService $activityStatus, PlaySessionService $playSessions): JsonResponse 
     {
         $child->load(['activities','privileges',]);
 
@@ -31,8 +32,12 @@ class ChildDashboardController extends Controller
                 ],
 
                 'screen_time' => [
-                    'used_minutes' => 0,
+                    'used_minutes' => $playSessions->usedToday($child),
                     'daily_limit_minutes' => $child->daily_limit_minutes,
+                    'remaining_minutes' => max(
+                        0,
+                        $child->daily_limit_minutes - $playSessions->usedToday($child)
+                    ),
                 ],
 
                 'activities' => $child->activities
