@@ -11,10 +11,15 @@ use RuntimeException;
 
 class ActivityService
 {
-    public function claim(
-        Child $child,
-        Activity $activity
-    ): ActivityClaim {
+    public function claim(Child $child, Activity $activity): ActivityClaim 
+    {
+        $scheduleService = app(ActivityScheduleService::class);
+        if (!$scheduleService->isScheduledToday($activity)) {
+            throw new RuntimeException(
+                'This activity is not scheduled for today.'
+            );
+        }
+
         $childActivity = $child->activities()
             ->whereKey($activity->id)
             ->wherePivot('is_active', true)
@@ -25,7 +30,7 @@ class ActivityService
                 'This activity is not assigned to this child.'
             );
         }
-
+        
         $alreadyClaimed = $child->activityClaims()
             ->where('activity_id', $activity->id)
             ->whereDate('scheduled_date', today())
@@ -55,10 +60,8 @@ class ActivityService
         ]);
     }
 
-    public function approve(
-        ActivityClaim $claim,
-        User $parent
-    ): ActivityClaim {
+    public function approve(ActivityClaim $claim, User $parent): ActivityClaim 
+    {
         return DB::transaction(function () use ($claim, $parent) {
             if ($claim->status !== 'pending') {
                 throw new RuntimeException(
@@ -87,11 +90,8 @@ class ActivityService
         });
     }
 
-    public function reject(
-        ActivityClaim $claim,
-        User $parent,
-        ?string $note = null
-    ): ActivityClaim {
+    public function reject(ActivityClaim $claim, User $parent, ?string $note = null): ActivityClaim 
+    {
         if ($claim->status !== 'pending') {
             throw new RuntimeException(
                 'This claim has already been processed.'
@@ -108,16 +108,10 @@ class ActivityService
         return $claim->fresh();
     }
 
-    public function confirmPenalty(
-        ActivityClaim $claim,
-        User $parent,
-        ?string $note = null
-    ): ActivityClaim {
-        return DB::transaction(function () use (
-            $claim,
-            $parent,
-            $note
-        ) {
+    public function confirmPenalty(ActivityClaim $claim, User $parent, ?string $note = null): ActivityClaim 
+    {
+        return DB::transaction(function () use ($claim, $parent, $note) 
+        {
             if ($claim->status !== 'expired') {
                 throw new RuntimeException(
                     'This claim is not waiting for a penalty.'

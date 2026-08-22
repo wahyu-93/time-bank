@@ -174,6 +174,38 @@ class DemoFamilySeeder extends Seeder
             ]
         );
 
+        $sholat->schedules()->updateOrCreate(
+            ['frequency' => 'daily'],
+            [
+                'days_of_week' => null,
+                'is_active' => true,
+            ]
+        );
+
+        $ngaji->schedules()->updateOrCreate(
+            ['frequency' => 'daily'],
+            [
+                'days_of_week' => null,
+                'is_active' => true,
+            ]
+        );
+
+        $pr->schedules()->updateOrCreate(
+            ['frequency' => 'weekly'],
+            [
+                'days_of_week' => [1, 2, 3, 4, 5],
+                'is_active' => true,
+            ]
+        );
+
+        $rapikanKamar->schedules()->updateOrCreate(
+            ['frequency' => 'weekly'],
+            [
+                'days_of_week' => [6, 7],
+                'is_active' => true,
+            ]
+        );
+
         /*
         |--------------------------------------------------------------------------
         | Assign Activities
