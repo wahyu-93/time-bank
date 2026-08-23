@@ -45,13 +45,14 @@ class PlaySessionService
             }
 
             $startedAt = $session->started_at;
-            $actualMinutes = max(
-                0,
-                $startedAt->diffInMinutes(now())
-            );
+            $elapsedSeconds = $startedAt->diffInSeconds(now());
+
+            if ($elapsedSeconds < ($session->planned_minutes * 60)) {
+                throw new RuntimeException('Session belum selesai.');
+            }
 
             $actualMinutes = min(
-                $actualMinutes,
+                intdiv($elapsedSeconds, 60),
                 $session->planned_minutes
             );
 
