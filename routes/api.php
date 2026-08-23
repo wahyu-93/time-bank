@@ -39,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'family.claim'])->group(function () {
     Route::post('/activity-claims/{claim}/approve', [ActivityApprovalController::class, 'approve']);
     Route::post('/activity-claims/{claim}/reject', [ActivityApprovalController::class, 'reject']);
+    Route::post('/activity-claims/{claim}/penalty', [ActivityApprovalController::class, 'penalty']);
 });
 
 Route::post('/children/{child}/privileges/{privilege}/request', [PrivilegeRequestController::class, 'store']);

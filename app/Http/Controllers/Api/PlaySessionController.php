@@ -52,13 +52,31 @@ class PlaySessionController extends Controller
 
     public function show(PlaySession $session): JsonResponse
     {
+        if ($session->status === 'active' && $session->started_at) {
+            $elapsedSeconds = $session->started_at->diffInSeconds(now());
+            $plannedSeconds = $session->planned_minutes * 60;
+
+            if ($elapsedSeconds >= $plannedSeconds) {
+                $session->update([
+                    'status' => 'completed',
+                    'ended_at' => now(),
+                    'actual_minutes' => $session->planned_minutes,
+                ]);
+
+                $session->refresh();
+            }
+        }
+
         $remainingSeconds = 0;
 
         if ($session->status === 'pending') {
             $remainingSeconds = $session->planned_minutes * 60;
         } elseif ($session->status === 'active') {
-            $elapsed = $session->started_at->diffInSeconds(now());
-            $remainingSeconds = max(0, ($session->planned_minutes * 60) - $elapsed);
+            $elapsedSeconds = $session->started_at->diffInSeconds(now());
+            $remainingSeconds = max(
+                0,
+                ($session->planned_minutes * 60) - $elapsedSeconds
+            );
         }
 
         return response()->json([

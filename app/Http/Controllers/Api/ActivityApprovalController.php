@@ -53,4 +53,27 @@ class ActivityApprovalController extends Controller
             ], 422);
         }
     }
+
+    public function penalty(ActivityClaim $claim, Request $request, ActivityService $activityService): JsonResponse
+    {
+        try {
+            $claim = $activityService->confirmPenalty(
+                $claim,
+                $request->user(),
+                $request->input('note')
+            );
+
+            return response()->json([
+                'data' => [
+                    'id' => $claim->id,
+                    'status' => 'rejected',
+                    'penalty_minutes' => $claim->penalty_minutes,
+                ],
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
 }

@@ -16,6 +16,11 @@ class TimeBankService
         return (int) $child->timeTransactions()->sum('amount');
     }
 
+    public function debt(Child $child): int
+    {
+        return max(0, -$this->balance($child));
+    }
+
     public function add(Child $child, int $minutes, string $type, string $description, ?User $user = null, ?Model $source = null): TimeTransaction 
     {
         if ($minutes <= 0) {

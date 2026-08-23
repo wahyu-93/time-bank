@@ -11,9 +11,10 @@ use RuntimeException;
 
 class ActivityService
 {
-    public function claim(Child $child, Activity $activity): ActivityClaim 
+    public function claim(Child $child, Activity $activity): ActivityClaim
     {
         $scheduleService = app(ActivityScheduleService::class);
+
         if (!$scheduleService->isScheduledToday($activity)) {
             throw new RuntimeException(
                 'This activity is not scheduled for today.'
@@ -30,42 +31,58 @@ class ActivityService
                 'This activity is not assigned to this child.'
             );
         }
-        
-        $alreadyClaimed = $child->activityClaims()
+
+        $claim = $child->activityClaims()
             ->where('activity_id', $activity->id)
             ->whereDate('scheduled_date', today())
-            ->exists();
+            ->first();
 
-        if ($alreadyClaimed) {
+        if (!$claim) {
             throw new RuntimeException(
-                'This activity has already been claimed today.'
+                'Activity claim for today has not been created.'
             );
         }
 
-        $reward = $childActivity->pivot->custom_reward_minutes
-            ?? $activity->reward_minutes;
+        if ($claim->status !== 'pending') {
+            throw new RuntimeException(
+                'This activity has already been processed today.'
+            );
+        }
 
-        $penalty = $childActivity->pivot->custom_penalty_minutes
-            ?? $activity->penalty_minutes;
-
-        return $child->activityClaims()->create([
-            'activity_id' => $activity->id,
-            'scheduled_date' => today(),
-            'reward_minutes' => $reward,
-            'penalty_minutes' => $penalty,
+        $claim->update([
             'claimed_at' => now(),
             'status' => $activity->requires_approval
                 ? 'pending'
                 : 'approved',
         ]);
+
+        if (!$activity->requires_approval) {
+            $bank = app(TimeBankService::class);
+
+            $bank->add(
+                child: $child,
+                minutes: $claim->reward_minutes,
+                type: 'reward',
+                description: $activity->name,
+                source: $claim,
+            );
+        }
+
+        return $claim->fresh();
     }
 
-    public function approve(ActivityClaim $claim, User $parent): ActivityClaim 
+    public function approve(ActivityClaim $claim, User $parent): ActivityClaim
     {
         return DB::transaction(function () use ($claim, $parent) {
             if ($claim->status !== 'pending') {
                 throw new RuntimeException(
                     'This claim has already been processed.'
+                );
+            }
+
+            if (!$claim->claimed_at) {
+                throw new RuntimeException(
+                    'This activity has not been completed by the child.'
                 );
             }
 
@@ -90,11 +107,20 @@ class ActivityService
         });
     }
 
-    public function reject(ActivityClaim $claim, User $parent, ?string $note = null): ActivityClaim 
-    {
+    public function reject(
+        ActivityClaim $claim,
+        User $parent,
+        ?string $note = null
+    ): ActivityClaim {
         if ($claim->status !== 'pending') {
             throw new RuntimeException(
                 'This claim has already been processed.'
+            );
+        }
+
+        if (!$claim->claimed_at) {
+            throw new RuntimeException(
+                'This activity has not been completed by the child.'
             );
         }
 
@@ -108,10 +134,12 @@ class ActivityService
         return $claim->fresh();
     }
 
-    public function confirmPenalty(ActivityClaim $claim, User $parent, ?string $note = null): ActivityClaim 
-    {
-        return DB::transaction(function () use ($claim, $parent, $note) 
-        {
+    public function confirmPenalty(
+        ActivityClaim $claim,
+        User $parent,
+        ?string $note = null
+    ): ActivityClaim {
+        return DB::transaction(function () use ($claim, $parent, $note) {
             if ($claim->status !== 'expired') {
                 throw new RuntimeException(
                     'This claim is not waiting for a penalty.'
